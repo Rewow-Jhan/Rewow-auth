@@ -1,14 +1,17 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit, Logger } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaClient } from '@prisma/client';
 
 @Injectable()
 export class UsersService extends PrismaClient implements OnModuleInit {
+
+  private readonly logger = new Logger('UsersService');
+
   onModuleInit() {
     this.$connect();
-    console.log('Connected to the database');
-    
+    this.logger.log('Connected to the database');
+
   }
 
   create(createUserDto: CreateUserDto) {
