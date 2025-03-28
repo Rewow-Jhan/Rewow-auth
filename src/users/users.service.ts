@@ -1,11 +1,17 @@
 import { Injectable, OnModuleInit, Logger, HttpStatus } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { PrismaClient } from '@prisma/client';
-import { RpcException } from '@nestjs/microservices';
+import { RpcException, Payload } from '@nestjs/microservices';
 import { FindUserByEmailDto } from './dto/find-user-by-email.dto';
+import { JwtService } from '@nestjs/jwt';
+import { AuthJwtPayload } from 'src/types/jwtPayload';
 
 @Injectable()
 export class UsersService extends PrismaClient implements OnModuleInit {
+
+  constructor(private jwtService: JwtService) {
+    super();
+  }
 
   private readonly logger = new Logger('UsersService');
 
@@ -33,7 +39,7 @@ export class UsersService extends PrismaClient implements OnModuleInit {
     }
   }
 
-  async findByEmail (FindUserByEmailDto: FindUserByEmailDto) {
+  async findByEmail(FindUserByEmailDto: FindUserByEmailDto) {
     const user = await this.user.findUnique({
       where: {
         email: FindUserByEmailDto.email,
@@ -50,7 +56,7 @@ export class UsersService extends PrismaClient implements OnModuleInit {
     return user;
   }
 
-  async loginWithGoogle(createUserDto: CreateUserDto) {
+  async googleLogin(createUserDto: CreateUserDto) {
     try {
       const user = await this.user.findUnique({
         where: {
@@ -59,23 +65,29 @@ export class UsersService extends PrismaClient implements OnModuleInit {
       });
 
       if (user) {
-        return user;
-      }
+        const payload: AuthJwtPayload = {
+          sub: user.id,
+        }
 
-      const createdUser = await this.user.create({
-        data: createUserDto,
-      });
+        const token = await this.jwtService.signAsync(payload);
 
-      return createdUser;
-    } catch (error) {
-      if (error.code === 'P2002') {
-        throw new RpcException({
-          message: 'This email is already in use',
-          status: HttpStatus.CONFLICT,
+        return { user, token };
+      } else {
+        const createdUser = await this.user.create({
+          data: createUserDto,
         });
-      }
 
-      throw error;
+        const payload: AuthJwtPayload = {
+          sub: createdUser.id,
+        }
+
+        return { user: createdUser, token: this.jwtService.sign(payload) };
+      }
+    } catch (error) {
+      throw new RpcException({
+        message: error.message,
+        status: HttpStatus.INTERNAL_SERVER_ERROR
+      });
     }
   }
 }

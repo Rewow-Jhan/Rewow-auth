@@ -13,13 +13,8 @@ export class UsersController {
     return this.usersService.create(createUserDto);
   }
 
-  @MessagePattern('find_user_by_email')
-  findByEmail(@Payload() findUserByEmailDto: FindUserByEmailDto) {
-    return this.usersService.findByEmail(findUserByEmailDto);
-  }
-
   @MessagePattern('login_with_google')
   loginWithGoogle(@Payload() createUserDto: CreateUserDto) {
-    return this.usersService.loginWithGoogle(createUserDto);
+    return this.usersService.googleLogin(createUserDto);
   }
 }
